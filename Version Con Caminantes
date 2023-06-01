@@ -1,0 +1,165 @@
+// Variables
+let caminante1, caminante2, caminante3;
+let trazo = 5; // Grosor de las líneas
+let capa1, capa2, capa3;
+let mousePrevX, mousePrevY;
+let centroX, centroY; // Posición del centro de la pantalla
+
+// Función para interpolar ángulos
+function lerpAngle(start, end, amount) {
+  let difference = end - start;
+  while (difference < -PI) difference += TWO_PI;
+  while (difference > PI) difference -= TWO_PI;
+  return start + difference * amount;
+}
+
+function setup() {
+  createCanvas(800, 800);
+  background(218, 223, 201); // Cambiar color de fondo
+
+  centroX = width / 2;
+  centroY = height / 2;
+
+  // Crear las capas
+  capa1 = createGraphics(width, height);
+  capa2 = createGraphics(width, height);
+  capa3 = createGraphics(width, height);
+
+  // Crear los caminantes con posiciones iniciales dentro del cuadrado
+  let cuadradoX = 0; // Posición X del cuadrado
+  let cuadradoY = 0; // Posición Y del cuadrado
+  let cuadradoLado = width; // Lado del cuadrado
+
+  caminante1 = new Caminante(
+    random(cuadradoX, cuadradoX + cuadradoLado),
+    random(cuadradoY, cuadradoY + cuadradoLado),
+    capa1,
+    color(20, 38, 32, 5),
+    5 // Aumenta la velocidad del caminante1
+  );
+  caminante2 = new Caminante(
+    random(cuadradoX, cuadradoX + cuadradoLado),
+    random(cuadradoY, cuadradoY + cuadradoLado),
+    capa2,
+    color(209, 212, 70, 5),
+    5 // Aumenta la velocidad del caminante2
+  );
+  caminante3 = new Caminante(
+    random(cuadradoX, cuadradoX + cuadradoLado),
+    random(cuadradoY, cuadradoY + cuadradoLado),
+    capa3,
+    color(120, 168, 162, 5),
+    5 // Aumenta la velocidad del caminante3
+  );
+
+  // Ajustar la tensión de las curvas
+  curveTightness(-6);
+
+  // Guardar posición inicial del mouse
+  mousePrevX = mouseX;
+  mousePrevY = mouseY;
+}
+
+function draw() {
+  // Actualizar las capas
+  capa1.clear();
+  capa2.clear();
+  capa3.clear();
+
+  // Dibujar caminantes en las capas
+  caminante1.dibujar();
+  caminante2.dibujar();
+  caminante3.dibujar();
+
+  // Dibujar las capas en el lienzo principal
+  image(capa1, 0, 0);
+  image(capa2, 0, 0);
+  image(capa3, 0, 0);
+
+  // Actualizar caminantes solo si el mouse se ha movido
+  if (mouseX !== mousePrevX || mouseY !== mousePrevY) {
+    caminante1.actualizar();
+    caminante2.actualizar();
+    caminante3.actualizar();
+  }
+
+  // Actualizar posición anterior del mouse
+  mousePrevX = mouseX;
+  mousePrevY = mouseY;
+}
+
+class Caminante {
+  constructor(x, y, capa, color) {
+    this.x = x;
+    this.y = y;
+    this.direccion = random(TWO_PI);
+    this.nuevaDireccion = this.direccion;
+    this.velocidad = 3;
+    this.historia = [];
+    this.capa = capa;
+    this.trazo = trazo; // Grosor del trazo
+    this.color = color; // Cambiar color y opacidad
+  }
+
+  dibujar() {
+    this.capa.noFill();
+    this.capa.stroke(this.color);
+    this.capa.strokeWeight(this.trazo);
+    this.capa.beginShape();
+    for (let i = 0; i < this.historia.length; i++) {
+      let punto = this.historia[i];
+      this.capa.curveVertex(punto.x, punto.y);
+    }
+    this.capa.endShape();
+  }
+
+  actualizar() {
+    // Calcular siguiente posición
+    let pasoX = cos(this.direccion) * this.velocidad;
+    let pasoY = sin(this.direccion) * this.velocidad;
+    let nuevaX = this.x + pasoX;
+    let nuevaY = this.y + pasoY;
+
+    // Verificar si está cerca de los bordes
+    let margen = 50; // Margen de proximidad al borde 
+
+    if (nuevaX < margen || nuevaX > width - margen || nuevaY < margen || nuevaY > height - margen) {
+      // Cambiar dirección hacia el centro de la pantalla
+      let anguloHaciaCentro = atan2(centroY - nuevaY, centroX - nuevaX);
+      this.nuevaDireccion = anguloHaciaCentro;
+    } else {
+      // Cambiar dirección aleatoriamente
+      if (random() < 0.01) {
+        this.nuevaDireccion = random(TWO_PI);
+      }
+    }
+
+    // Interpolar hacia la nueva dirección
+    this.direccion = lerpAngle(this.direccion, this.nuevaDireccion, 0.09);
+
+    // Actualizar posición
+    this.x = nuevaX;
+    this.y = nuevaY;
+
+    // Verificar si está dentro del cuadrado
+    let cuadradoX = 0; // Posición X del cuadrado
+    let cuadradoY = 0; // Posición Y del cuadrado
+    let cuadradoLado = width; // Lado del cuadrado
+
+    if (this.x < cuadradoX) {
+      this.x = cuadradoX;
+    } else if (this.x > cuadradoX + cuadradoLado) {
+      this.x = cuadradoX + cuadradoLado;
+    }
+
+    if (this.y < cuadradoY) {
+      this.y = cuadradoY;
+    } else if (this.y > cuadradoY + cuadradoLado) {
+      this.y = cuadradoY + cuadradoLado;
+    }
+
+    // Guardar posición en el historial
+    this.historia.push({ x: this.x, y: this.y });
+  }
+}
+
